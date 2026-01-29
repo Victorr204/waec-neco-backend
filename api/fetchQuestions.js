@@ -39,20 +39,22 @@ export default async function handler(req, res) {
     result.data.forEach((q) => {
       const ref = db.collection("pastQuestions").doc();
       batch.set(ref, {
-        subject,
-        exam: examType,
-        year,
-        text: q.question || "",
-        options: {
-          A: q.optionA,
-          B: q.optionB,
-          C: q.optionC,
-          D: q.optionD,
-        },
-        answer: q.answer,
-        isTest: false,
-        createdAt: new Date(),
-      });
+  text: q.question || q.text || "Question unavailable",
+  options: {
+    A: q.option_a,
+    B: q.option_b,
+    C: q.option_c,
+    D: q.option_d,
+  },
+  answer: q.answer || null,
+
+  subject,
+  exam: examType,
+  year,
+
+  isTest: false, // important for Home filter
+  createdAt: new Date()
+});
     });
 
     await batch.commit();
