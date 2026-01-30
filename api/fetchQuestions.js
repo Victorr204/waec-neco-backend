@@ -1,10 +1,8 @@
-import admin from "firebase-admin";
-import { db } from "../firebaseAdmin";
-
 const ALOC_API_URL = "https://questions.aloc.com.ng/api/v2/q";
 const ALOC_TOKEN = process.env.ALOC_API_TOKEN;
 
 export default async function handler(req, res) {
+  // CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -42,46 +40,41 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       console.error("ALOC ERROR:", data);
-      return res.status(response.status).json({ message: "ALOC API error", error: data });
+      return res.status(response.status).json({
+        message: "ALOC API error",
+        error: data,
+      });
     }
 
-    const questions = data.data; // ✅ correct path
+    const questions = data.data;
 
     if (!questions || questions.length === 0) {
-      return res.status(200).json({ message: "No questions found from ALOC" });
+      return res.status(200).json([]);
     }
 
-    const batch = db.batch();
+    // Format for your frontend
+    const formatted = questions.map((q, index) => ({
+      id: index + 1,
+      subject,
+      exam: examType.toUpperCase(),
+      year,
+      text: q.question,
+      options: {
+        A: q.option_a,
+        B: q.option_b,
+        C: q.option_c,
+        D: q.option_d,
+      },
+      answer: q.answer,
+      isTest: false,
+    }));
 
-    questions.forEach((q) => {
-      const ref = db.collection("pastQuestions").doc();
-
-      batch.set(ref, {
-        text: q.question || "Question unavailable",
-        options: {
-          A: q.option_a,
-          B: q.option_b,
-          C: q.option_c,
-          D: q.option_d,
-        },
-        answer: q.answer || null,
-
-        subject,
-        exam: examType,
-        year,
-
-        isTest: false,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-    });
-
-    await batch.commit();
-
-    return res.status(200).json({
-      message: `Saved ${questions.length} questions to Firestore`,
-    });
+    return res.status(200).json(formatted);
   } catch (err) {
     console.error("SERVER ERROR:", err);
-    return res.status(500).json({ message: "Internal Server Error", error: err.message });
+    return res.status(500).json({
+      message: "Internal Server Error",
+      error: err.message,
+    });
   }
 }
