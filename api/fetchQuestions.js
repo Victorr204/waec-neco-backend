@@ -7,12 +7,18 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST")
+  // Required for preflight
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  if (req.method !== "POST") {
     return res.status(405).json({ message: "Method not allowed" });
+  }
 
   try {
-    const { subject, year, examType } = req.body;
+    // Make sure body is parsed
+    const { subject, year, examType } = await parseJSONBody(req);
 
     if (!subject || !year || !examType) {
       return res.status(400).json({ message: "Missing parameters" });
@@ -30,8 +36,7 @@ export default async function handler(req, res) {
 
     const url = `${ALOC_API_URL}?${queryParams.toString()}`;
 
-    console.log("Fetching from ALOC:", url);
-
+    // Fetch from ALOC
     const response = await fetch(url, {
       headers: { Authorization: `Bearer ${ALOC_TOKEN}` },
     });
@@ -39,26 +44,20 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("ALOC ERROR:", data);
       return res.status(response.status).json({
-        message: "ALOC API error",
+        message: "ALOC API responded with error",
         error: data,
       });
     }
 
-    const questions = data.data;
+    const questions = data.data || [];
 
-    if (!questions || questions.length === 0) {
-      return res.status(200).json([]);
-    }
-
-    // Format for your frontend
     const formatted = questions.map((q, index) => ({
       id: index + 1,
       subject,
       exam: examType.toUpperCase(),
       year,
-      text: q.question,
+      text: q.question || "No text provided",
       options: {
         A: q.option_a,
         B: q.option_b,
@@ -71,10 +70,23 @@ export default async function handler(req, res) {
 
     return res.status(200).json(formatted);
   } catch (err) {
-    console.error("SERVER ERROR:", err);
-    return res.status(500).json({
-      message: "Internal Server Error",
-      error: err.message,
-    });
+    console.error("📌 fetchQuestions error:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
+}
+
+// Helper to parse JSON body
+async function parseJSONBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", () => {
+      try {
+        resolve(JSON.parse(body));
+      } catch (e) {
+        reject(new Error("Invalid JSON"));
+      }
+    });
+    req.on("error", reject);
+  });
 }
