@@ -2,12 +2,11 @@ const ALOC_API_URL = "https://questions.aloc.com.ng/api/v2/q";
 const ALOC_TOKEN = process.env.ALOC_API_TOKEN;
 
 export default async function handler(req, res) {
-  // CORS
+  // 🌍 CORS
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // Required for preflight
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
@@ -17,14 +16,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Make sure body is parsed
-    const { subject, year, examType } = await parseJSONBody(req);
+    // ✅ Vercel auto-parses JSON body
+    const { subject, year, examType } = req.body;
 
     if (!subject || !year || !examType) {
       return res.status(400).json({ message: "Missing parameters" });
     }
 
     if (!ALOC_TOKEN) {
+      console.error("❌ ALOC TOKEN MISSING");
       return res.status(500).json({ message: "ALOC token not configured" });
     }
 
@@ -35,15 +35,21 @@ export default async function handler(req, res) {
     });
 
     const url = `${ALOC_API_URL}?${queryParams.toString()}`;
+    console.log("📡 Fetching from ALOC:", url);
 
-    // Fetch from ALOC
+    // ✅ CORRECT AUTH FORMAT FOR ALOC
     const response = await fetch(url, {
-      headers: { Authorization: `Bearer ${ALOC_TOKEN}` },
+      method: "GET",
+      headers: {
+        Authorization: ALOC_TOKEN, // 🚫 NO Bearer
+        Accept: "application/json",
+      },
     });
 
     const data = await response.json();
 
     if (!response.ok) {
+      console.error("❌ ALOC ERROR RESPONSE:", data);
       return res.status(response.status).json({
         message: "ALOC API responded with error",
         error: data,
@@ -52,41 +58,36 @@ export default async function handler(req, res) {
 
     const questions = data.data || [];
 
+    if (questions.length === 0) {
+      return res.status(200).json([]);
+    }
+
+    // 🎯 Format for frontend
     const formatted = questions.map((q, index) => ({
-      id: index + 1,
+      id: `${subject}-${year}-${index}`,
       subject,
       exam: examType.toUpperCase(),
       year,
-      text: q.question || "No text provided",
+      text: q.question || "No question text",
       options: {
         A: q.option_a,
         B: q.option_b,
         C: q.option_c,
         D: q.option_d,
       },
-      answer: q.answer,
+      answer: q.answer || null,
       isTest: false,
     }));
 
-    return res.status(200).json(formatted);
-  } catch (err) {
-    console.error("📌 fetchQuestions error:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
-  }
-}
+    console.log(`✅ Returning ${formatted.length} questions`);
 
-// Helper to parse JSON body
-async function parseJSONBody(req) {
-  return new Promise((resolve, reject) => {
-    let body = "";
-    req.on("data", (chunk) => (body += chunk));
-    req.on("end", () => {
-      try {
-        resolve(JSON.parse(body));
-      } catch (e) {
-        reject(new Error("Invalid JSON"));
-      }
+    return res.status(200).json(formatted);
+
+  } catch (err) {
+    console.error("🔥 SERVER ERROR:", err);
+    return res.status(500).json({
+      message: "Server error",
+      error: err.message,
     });
-    req.on("error", reject);
-  });
+  }
 }
