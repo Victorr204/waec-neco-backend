@@ -10,15 +10,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: "Method not allowed" });
 
   try {
-    // ✅ Vercel automatically parses JSON body
-    const { subject, year, examType } = req.body;
+    const { subject, year, examType } = req.body || {};
 
     if (!subject || !year || !examType) {
       return res.status(400).json({ message: "Missing parameters" });
     }
 
     const ALOC_TOKEN = process.env.ALOC_API_TOKEN;
-
     if (!ALOC_TOKEN) {
       return res.status(500).json({ message: "ALOC token not configured" });
     }
@@ -29,9 +27,7 @@ export default async function handler(req, res) {
       type: examType,
     });
 
-    const url = `${ALOC_API_URL}?${queryParams.toString()}`;
-
-    const response = await fetch(url, {
+    const response = await fetch(`${ALOC_API_URL}?${queryParams}`, {
       headers: {
         Authorization: `Bearer ${ALOC_TOKEN}`,
         Accept: "application/json",
@@ -41,20 +37,15 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (!response.ok) {
-      return res.status(response.status).json({
-        message: "ALOC API error",
-        error: data,
-      });
+      return res.status(response.status).json({ error: data });
     }
 
-    const questions = data.data || [];
-
-    const formatted = questions.map((q, index) => ({
-      id: index + 1,
+    const formatted = (data.data || []).map((q, i) => ({
+      id: i + 1,
       subject,
       exam: examType.toUpperCase(),
       year,
-      text: q.question || "No text provided",
+      text: q.question,
       options: {
         A: q.option_a,
         B: q.option_b,
@@ -64,9 +55,9 @@ export default async function handler(req, res) {
       answer: q.answer,
     }));
 
-    return res.status(200).json(formatted);
+    res.status(200).json(formatted);
   } catch (err) {
-    console.error("FetchQuestions Server Error:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
+    console.error("SERVER ERROR:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 }
