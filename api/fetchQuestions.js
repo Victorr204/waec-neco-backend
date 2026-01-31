@@ -10,10 +10,16 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: "Method not allowed" });
 
   try {
+    // ✅ Vercel auto-parses JSON body — DO NOT manually parse
     const { subject, year, examType } = req.body || {};
 
+    console.log("Incoming body:", req.body); // 👈 ADD THIS
+
     if (!subject || !year || !examType) {
-      return res.status(400).json({ message: "Missing parameters" });
+      return res.status(400).json({
+        message: "Missing parameters",
+        received: req.body,
+      });
     }
 
     const ALOC_TOKEN = process.env.ALOC_API_TOKEN;
