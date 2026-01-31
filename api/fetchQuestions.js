@@ -10,10 +10,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: "Method not allowed" });
 
   try {
-    // ✅ Vercel auto-parses JSON body — DO NOT manually parse
     const { subject, year, examType } = req.body || {};
-
-    console.log("Incoming body:", req.body); // 👈 ADD THIS
+    console.log("Incoming body:", req.body);
 
     if (!subject || !year || !examType) {
       return res.status(400).json({
@@ -34,15 +32,17 @@ export default async function handler(req, res) {
     });
 
     const response = await fetch(`${ALOC_API_URL}?${queryParams}`, {
+      method: "GET",
       headers: {
-        Authorization: `Bearer ${ALOC_TOKEN}`,
         Accept: "application/json",
+        Authorization: ALOC_TOKEN, // ✅ FIXED
       },
     });
 
     const data = await response.json();
 
     if (!response.ok) {
+      console.error("ALOC ERROR RESPONSE:", data);
       return res.status(response.status).json({ error: data });
     }
 
@@ -61,9 +61,9 @@ export default async function handler(req, res) {
       answer: q.answer,
     }));
 
-    res.status(200).json(formatted);
+    return res.status(200).json(formatted);
   } catch (err) {
     console.error("SERVER ERROR:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+    return res.status(500).json({ message: "Server error", error: err.message });
   }
 }
