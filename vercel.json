@@ -1,0 +1,38 @@
+{
+  "functions": {
+    "api/questions/*.js": {
+      "maxDuration": 30,
+      "memory": 1024
+    },
+    "api/questions/import.js": {
+      "maxDuration": 60,
+      "memory": 2048
+    }
+  },
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Credentials", "value": "true" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" }
+      ]
+    }
+  ],
+  "env": {
+    "FIREBASE_TYPE": "@firebase_type",
+    "FIREBASE_PROJECT_ID": "@firebase_project_id",
+    "FIREBASE_PRIVATE_KEY_ID": "@firebase_private_key_id",
+    "FIREBASE_PRIVATE_KEY": "@firebase_private_key",
+    "FIREBASE_CLIENT_EMAIL": "@firebase_client_email",
+    "FIREBASE_CLIENT_ID": "@firebase_client_id",
+    "FIREBASE_AUTH_URI": "@firebase_auth_uri",
+    "FIREBASE_TOKEN_URI": "@firebase_token_uri",
+    "FIREBASE_AUTH_PROVIDER_CERT_URL": "@firebase_auth_provider_cert_url",
+    "FIREBASE_CLIENT_CERT_URL": "@firebase_client_cert_url",
+    "ALOC_BASE_URL": "@aloc_base_url",
+    "ALOC_API_KEY": "@aloc_api_key",
+    "API_SECRET": "@api_secret"
+  }
+}
